@@ -2,7 +2,7 @@ clf;
 clear all
 % automatically create postscript whenever
 % figure is drawn
-tmpfilename = 'figbaseline_distance';
+tmpfilename = 'fignearterm';
 tmpfilebwname = sprintf('%s_noname_bw',tmpfilename);
 tmpfilenoname = sprintf('%s_noname',tmpfilename);
 
@@ -87,12 +87,28 @@ outbreak.y0(21:30)=7500.*population.agefrac;
 outbreak.y0(31:40)=500.*population.agefrac;
 outbreak.y0(71:80)=25.*population.agefrac; % 25 initial deaths
 outbreak.y0=outbreak.y0/population.N;
-outbreak.pTime=180;
+outbreak.pTime=60;
+% Initiall Sims
+opts=odeset('reltol',1e-8,'maxstep',0.1);
+[tbau,ybau]=ode45(@covid_model_ga,[0:1:outbreak.pTime], outbreak.y0,opts,pars,agepars);
+pars_bau=pars;
 
-% Sims - Baseline
+% Stats
+statsbau.R=ybau(:,agepars.R_ids);
+statsbau.D=ybau(:,agepars.D_ids);
+statsbau.Htot=ybau(:,agepars.Ihsub_ids)+ybau(:,agepars.Ihcri_ids);
+statsbau.Hacu=ybau(:,agepars.Ihcri_ids);
+statsbau.Dday_age=statsbau.D(2:end,:)-statsbau.D(1:end-1,:);
+statsbau.Dday=sum(statsbau.Dday_age');
+statsbau.Dcum=sum(statsbau.D');
+statsbau.Hacu_day=sum(statsbau.Hacu');
+statsbau.fracI=1-sum(ybau(:,agepars.S_ids)');
+statsbau.Iday=statsbau.fracI(2:end)-statsbau.fracI(1:end-1);
+
+% Sims - 25%
 % Irrelevant, no shielding
-pars.beta_a=3/10;   % Transmission for asymptomatic
-pars.beta_s=6/10;      % Transmission for symptomatic
+pars.beta_a=2.25/10;   % Transmission for asymptomatic
+pars.beta_s=4.5/10;      % Transmission for symptomatic
 pars.Ra=pars.beta_a/pars.gamma_a;
 pars.Rs=pars.beta_s/pars.gamma_s;
 pars.R0=pars.p*pars.Ra+(1-pars.p)*pars.Rs;
@@ -115,8 +131,8 @@ statsb.Iday=statsb.fracI(2:end)-statsb.fracI(1:end-1);
 
 % Sims - Medium, Some Control
 pars.alpha=0;  % Shielding
-pars.beta_a=2.25/10;   % Transmission for asymptomatic
-pars.beta_s=4.5/10;      % Transmission for symptomatic
+pars.beta_a=1.8/10;   % Transmission for asymptomatic
+pars.beta_s=3.6/10;      % Transmission for symptomatic
 pars.Ra=pars.beta_a/pars.gamma_a;
 pars.Rs=pars.beta_s/pars.gamma_s;
 pars.R0=pars.p*pars.Ra+(1-pars.p)*pars.Rs;
@@ -124,7 +140,7 @@ pars.R0=sum(pars.p.*population.agefrac*pars.Ra+(1-pars.p).*population.agefrac*pa
 pars_med=pars;
 [t,y]=ode45(@covid_model_ga,[0:1:outbreak.pTime], outbreak.y0,opts,pars,agepars);
 
-% Stats
+% Stats - 40%
 stats.R=y(:,agepars.R_ids);
 stats.D=y(:,agepars.D_ids);
 stats.Htot=y(:,agepars.Ihsub_ids)+y(:,agepars.Ihcri_ids);
@@ -138,8 +154,8 @@ stats.Dcum=sum(stats.D');
 
 
 % Sims - Low, Severe Control
-pars.beta_a=1.8/10;   % Transmission for asymptomatic
-pars.beta_s=3.6/10;      % Transmission for symptomatic
+pars.beta_a=1.2/10;   % Transmission for asymptomatic
+pars.beta_s=2.4/10;      % Transmission for symptomatic
 pars.Ra=pars.beta_a/pars.gamma_a;
 pars.Rs=pars.beta_s/pars.gamma_s;
 pars.R0=pars.p*pars.Ra+(1-pars.p)*pars.Rs;
@@ -166,36 +182,40 @@ curdate=datetime('now');
 tickdates = curdate+[0:10:outbreak.pTime];
 formatOut = 'mm/dd';
 xticklabels=datestr(tickdates,formatOut);
-tmph=plot(curdate+t,statsb.Dcum*population.N,'k-');
+tmph=plot(curdate+t,statsbau.Dcum*population.N,'k-');
 set(tmph,'linewidth',3);
 hold on
-tmph=plot(curdate+t,stats.Dcum*population.N,'b--');
+tmph=plot(curdate+t,statsb.Dcum*population.N,'b--');
 set(tmph,'linewidth',3);
-tmph=plot(curdate+t,statsh.Dcum*population.N,'g:');
+tmph=plot(curdate+t,stats.Dcum*population.N,'g:');
 set(tmph,'linewidth',3);
+tmph=plot(curdate+t,statsh.Dcum*population.N,'ko');
+set(tmph,'markersize',8,'markerfacecolor','g');
 set(gca,'fontsize',16);
 set(gca,'xtick',tickdates,'xticklabelrotation',30,'fontsize',12);
 set(gca,'xticklabels',xticklabels);
 xlim([tickdates(1) tickdates(end)]);
 xlabel('Date','fontsize',16,'verticalalignment','top','interpreter','latex');
 ylabel('Cumulative deaths','fontsize',18,'verticalalignment','bottom','interpreter','latex');
-title({'COVID-19 Near-Term Epidemic, Georgia Assessment, March 24, 2020';'6 month Projection, Population 10.7 million w/Age-Stratified Risk'},'fontsize',18,'interpreter','latex')
-ylim([0 3*10^4]);
-set(gca,'yticklabels',{'0';'5,000';'10,000';'15,000';'20,000';'25,000';'30,000'});
-tmpl=legend('Baseline, $R_0=2.4$','25\% Contact Reduction, $R_0=1.8$','40\% Contact Reduction, $R_0=1.44$');
+title({'COVID-19 Near-Term Epidemic, Georgia Assessment, March 24, 2020';'2 Month Projection, Population 10.7 million w/Age-Stratified Risk'},'fontsize',18,'interpreter','latex')
+ylim([0 500]);
+%set(gca,'yticklabels',{'0';'5,000';'10,000';'15,000';'20,000';'25,000';'30,000'});
+tmpl=legend('Baseline, $R_0=2.4$','25\% Contact Reduction, $R_0=1.8$','40\% Contact Reduction, $R_0=1.44$','60\% Contact Reduction, $R_0=0.96$');
 set(tmpl,'interpreter','latex','location','northwest','fontsize',14);
 legend('boxoff');
 subplot(3,1,2);
-tmph=plot(curdate+t,statsb.Hacu_day*population.N,'k-');
+tmph=plot(curdate+t,statsbau.Hacu_day*population.N,'k-');
 set(tmph,'linewidth',3);
 hold on
-tmph=plot(curdate+t,stats.Hacu_day*population.N,'b--');
+tmph=plot(curdate+t,statsb.Hacu_day*population.N,'b--');
 set(tmph,'linewidth',3);
-tmph=plot(curdate+t,statsh.Hacu_day*population.N,'g:');
+tmph=plot(curdate+t,stats.Hacu_day*population.N,'g:');
 set(tmph,'linewidth',3);
+tmph=plot(curdate+t,statsh.Hacu_day*population.N,'ko');
+set(tmph,'markersize',8,'markerfacecolor','g');
 tmph=plot([curdate curdate+outbreak.pTime],[2500 2500],'r-');
 set(tmph,'linewidth',2,'color',[0.85 0 0]);
-tmpt=text(curdate+10,4000,'ICU Capacity');
+tmpt=text(curdate+10,2650,'ICU Capacity');
 set(tmpt,'fontsize',16,'interpreter','latex');
 set(gca,'fontsize',16);
 set(gca,'xtick',tickdates,'xticklabelrotation',30,'fontsize',12);
@@ -204,29 +224,31 @@ xlim([tickdates(1) tickdates(end)]);
 xlabel('Date','fontsize',16,'verticalalignment','top','interpreter','latex');
 ylabel('ICU beds needed','fontsize',18,'verticalalignment','bottom','interpreter','latex');
 % title('','fontsize',24)
-ylim([0 3*10^4]);
+ylim([0 3000]);
 set(gca,'yticklabels',{'0';'5,000';'10,000';'15,000';'20,000';'25,000';'30,000'});
-tmpl=legend('Baseline, $R_0=2.4$','25\% Contact Reduction, $R_0=1.8$','40\% Contact Reduction, $R_0=1.44$');
-set(tmpl,'interpreter','latex','location','northwest','fontsize',14);
+tmpl=legend('Baseline, $R_0=2.4$','25\% Contact Reduction, $R_0=1.8$','40\% Contact Reduction, $R_0=1.44$','60\% Contact Reduction, $R_0=0.96$');
+set(tmpl,'interpreter','latex','location','west','fontsize',14);
 legend('boxoff');
 subplot(3,1,3);
-tmph=plot(curdate+t(2:end),statsb.Iday*10^7,'k-');
+tmph=plot(curdate+t(2:end),statsbau.Iday*10^7,'k-');
 set(tmph,'linewidth',3);
 hold on
-tmph=plot(curdate+t(2:end),stats.Iday*10^7,'b--');
+tmph=plot(curdate+t(2:end),statsb.Iday*10^7,'b--');
 set(tmph,'linewidth',3);
-tmph=plot(curdate+t(2:end),statsh.Iday*10^7,'g:');
+tmph=plot(curdate+t(2:end),stats.Iday*10^7,'g:');
 set(tmph,'linewidth',3);
+tmph=plot(curdate+t(2:end),statsh.Iday*10^7,'ko');
+set(tmph,'markersize',8,'markerfacecolor','g');
 set(gca,'fontsize',16);
 set(gca,'xtick',tickdates,'xticklabelrotation',30,'fontsize',12);
 set(gca,'xticklabels',xticklabels);
-set(gca,'yticklabels',{'0';'50,000';'100,000';'150,000';'200,000';'250,000';'300,000'});
+set(gca,'yticklabels',{'0';'5,000';'10,000';'15,000';'20,000';'25,000';'30,000'});
 xlim([tickdates(1) tickdates(end)]);
 xlabel('Date','fontsize',16,'verticalalignment','top','interpreter','latex');
 ylabel('New infections per day','fontsize',18,'verticalalignment','bottom','interpreter','latex');
 % title('','fontsize',24)
-ylim([0 3*10^5]);
-tmpl=legend('Baseline, $R_0=2.40$','25\% Contact Reduction, $R_0=1.80$','40\% Contact Reduction, $R_0=1.44$');
+ylim([0 2*10^4]);
+tmpl=legend('Baseline, $R_0=2.4$','25\% Contact Reduction, $R_0=1.8$','40\% Contact Reduction, $R_0=1.44$','60\% Contact Reduction, $R_0=0.96$');
 set(tmpl,'interpreter','latex','location','northeast','fontsize',14);
 legend('boxoff');
 % title('','fontsize',24)
