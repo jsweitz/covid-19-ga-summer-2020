@@ -225,7 +225,7 @@ xlabel('Date','fontsize',16,'verticalalignment','top','interpreter','latex');
 ylabel('ICU beds needed','fontsize',18,'verticalalignment','bottom','interpreter','latex');
 % title('','fontsize',24)
 ylim([0 3000]);
-set(gca,'yticklabels',{'0';'5,000';'10,000';'15,000';'20,000';'25,000';'30,000'});
+%set(gca,'yticklabels',{'0';'5,000';'10,000';'15,000';'20,000';'25,000';'30,000'});
 tmpl=legend('Baseline, $R_0=2.4$','25\% Contact Reduction, $R_0=1.8$','40\% Contact Reduction, $R_0=1.44$','60\% Contact Reduction, $R_0=0.96$');
 set(tmpl,'interpreter','latex','location','west','fontsize',14);
 legend('boxoff');
