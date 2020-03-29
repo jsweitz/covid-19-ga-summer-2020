@@ -215,7 +215,7 @@ statsh.Iday=statsh.Is(2:end)-statsh.Is(1:end-1);
 %legend('S','E','I1','I2','R','D');
 
 subplot(3,1,1);
-curdate=datetime('now');
+curdate=datetime('now')-1;
 tickdates = curdate+[-10:2:outbreak.pNear];
 formatOut = 'mm/dd';
 xticklabels=datestr(tickdates,formatOut);
