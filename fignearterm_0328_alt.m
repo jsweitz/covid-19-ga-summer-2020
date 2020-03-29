@@ -2,7 +2,7 @@ clf
 clear all
 % automatically create postscript whenever
 % figure is drawn
-tmpfilename = 'fignearterm_0328';
+tmpfilename = 'fignearterm_0328_alt';
 tmpfilebwname = sprintf('%s_noname_bw',tmpfilename);
 tmpfilenoname = sprintf('%s_noname',tmpfilename);
 
@@ -98,19 +98,26 @@ outbreak.pTime=365;
 outbreak.pNear=30;
 outbreak.pshift=0;
 
+% Trigger approach
+%opts=odeset('reltol',1e-8,'maxstep',0.1,'events',@intervene_trigger);
+%[tpre,ypre,te,ye,ie]=ode45(@covid_model_ga,[0:1:outbreak.pTime], outbreak.y0,opts,pars,agepars);
 % Sims - Get to Crossing
 pars.alpha=0;  % Shielding
 pars.beta_a=4/10;   % Transmission for asymptomatic
 pars.beta_s=8/10;      % Transmission for symptomatic
 t0_opt = 67 + 7;  % From parameter fitting;
 te=t0_opt;
-% Trigger approach
-%opts=odeset('reltol',1e-8,'maxstep',0.1,'events',@intervene_trigger);
-%[tpre,ypre,te,ye,ie]=ode45(@covid_model_ga,[0:1:outbreak.pTime], outbreak.y0,opts,pars,agepars);
 % Parameter fit approach
 opts=odeset('reltol',1e-8,'maxstep',0.1);
-[tpre,ypre]=ode45(@covid_model_ga,[0:1:t0_opt], outbreak.y0,opts,pars,agepars);
+[tpre1,ypre1]=ode45(@covid_model_ga,[0:1:t0_opt-7], outbreak.y0,opts,pars,agepars);
+pars.beta_a=0.75*4/10;   % Transmission for asymptomatic
+pars.beta_s=0.75*8/10;   % Transmission for symptomatic
+[tpre2,ypre2]=ode45(@covid_model_ga,[t0_opt-7:1:t0_opt], ypre1(end,:),opts,pars,agepars);
+tpre=[tpre1(1:end-1); tpre2];
+ypre=[ypre1(1:end-1,:); ypre2];
 % Baseline case
+pars.beta_a=4/10;   % Transmission for asymptomatic
+pars.beta_s=8/10;      % Transmission for symptomatic
 [tpost,ypost]=ode45(@covid_model_ga,[0:1:outbreak.pNear],ypre(end,:),opts,pars,agepars);
 tbau=[tpre(1:end-1)-te; tpost];
 ybau=[ypre(1:end-1,:); ypost];
@@ -215,7 +222,7 @@ statsh.Iday=statsh.Is(2:end)-statsh.Is(1:end-1);
 %legend('S','E','I1','I2','R','D');
 
 subplot(3,1,1);
-curdate=datetime('now');
+curdate=datetime('now')-1;
 tickdates = curdate+[-10:2:outbreak.pNear];
 formatOut = 'mm/dd';
 xticklabels=datestr(tickdates,formatOut);
@@ -238,7 +245,7 @@ set(gca,'xticklabels',xticklabels);
 xlim([tickdates(1) tickdates(end)]);
 xlabel('Date','fontsize',16,'verticalalignment','top','interpreter','latex');
 ylabel('Cumulative deaths','fontsize',18,'verticalalignment','bottom','interpreter','latex');
-title({'COVID-19 Near-Term Epidemic, Georgia Assessment, March 28, 2020';'Updated 1 Month Projection, Age-Stratified Risk, No Prior Distancing Effects'},'fontsize',18,'interpreter','latex')
+title({'COVID-19 Near-Term Epidemic, Georgia Assessment, March 28, 2020';'Updated 1 Month Projection, Age-Stratified Risk, Prior Effects of Distancing'},'fontsize',18,'interpreter','latex')
 ylim([0 4000]);
 set(gca,'ytick',[0:500:4000]);
 %set(gca,'yticklabels',{'0';'5,000';'10,000';'15,000';'20,000';'25,000';'30,000'});
@@ -266,7 +273,7 @@ tmpt=text(curdate-8,1350,{'ICU Surge Capacity w/33% Availability'});
 set(gca,'fontsize',16);
 tmph=plot([curdate+10 curdate+outbreak.pTime],[3378 3378],'r-');
 set(tmph,'linewidth',2,'color',[0.85 0 0]);
-tmpt=text(curdate+20,3650,{'ICU Max Surge'});
+tmpt=text(curdate+22,3650,{'ICU Max Surge'});
 set(gca,'fontsize',16);
 set(tmpt,'fontsize',14,'interpreter','latex');
 set(gca,'xtick',tickdates,'xticklabelrotation',30,'fontsize',12);
